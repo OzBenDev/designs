@@ -1,0 +1,56 @@
+@startuml
+
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant SpeecherView
+participant InternalSendView
+participant User
+
+
+User -> ReadoutSendView: Clicks On the Voice input button
+ReadoutSendView ->  ReadoutSendView: setState(State.Speech)
+rnote over ChatAutocompleteView, ReadoutSendView #Gold
+      State Speech
+endrnote
+User -> SpeecherView: Speaks
+SpeecherView -> ChatAutocompleteView: onPrepared
+ChatAutocompleteView -> ChatAutocompleteView: Start Voice input indication
+User -> SpeecherView: Stops speaking
+SpeecherView -> ChatAutocompleteView: onStop
+ChatAutocompleteView -> ChatAutocompleteView: Stop Voice input indication
+
+SpeecherView -> SpeecherView: started counting <i>SilenceTimeBeforeMessageSend</i> sec
+
+group #PowderBlue User Clicks on the keyboard icon
+     User -> ReadoutSendView: Clicks On the Keyboard icon
+     ReadoutSendView -> SpeecherView: Stop counting SilenceTimeBeforeMessageSend
+      note Right
+          <b>message won't be sent automatically</b>
+          If the User escalates the Keyboard icon, he needs to send the message by clicking on the Send button
+          The SilenceTimeBeforeMessageSend clock is being canceled
+       end note
+     ReadoutSendView -> ReadoutSendView: setState(State.None)
+     rnote over ChatAutocompleteView, ReadoutSendView #Gold
+           State None
+     endrnote
+     User -> ChatAutocompleteView: text input by keyboard
+
+     group #SkyBlue if text.IsNotEmpty()
+        ChatAutocompleteView -> ReadoutSendView: setState(State.Send)
+        rnote over ChatAutocompleteView, ReadoutSendView #Gold
+              State Send
+        endrnote
+        User -> InternalSendView: Clicks on Send
+        InternalSendView -> ReadoutSendView: onSendClicked
+        ReadoutSendView -> ChatAutocompleteView: onSendClicked
+        ChatAutocompleteView -> ChatAutocompleteView: onSendInput.invoke(text)
+        ChatAutocompleteView -> ChatAutocompleteView: clear text
+     end
+
+     ChatAutocompleteView -> ReadoutSendView: setState(State.None)
+rnote over ChatAutocompleteView, ReadoutSendView #Gold
+      State None
+endrnote
+end
+
+@enduml

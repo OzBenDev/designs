@@ -1,0 +1,30 @@
+@startuml
+
+skinparam sequence {
+    ParticipantPadding 60
+    ParticipantBorderColor Blue
+    ActorBorderColor Blue
+
+    LifeLineBorderColor blue
+    LifeLineBackgroundColor #A9DCDF
+    ArrowColor darkBlue
+}
+
+== BotHandler - onResponse ==
+
+group #Azure statementResponse.articleMeta.chatEscalationAction == ArticleMeta.ChatEscalationAction.highValuePushChat
+
+BotHandler -> QuickOptionsHandler: handlePushChat
+QuickOptionsHandler --> BotHandler: callback: NRChannel?
+
+group #AliceBlue callback != null
+    BotHandler -> BotHandler: handleChannel(callback)
+else
+    BotHandler -> BotHandler: injectResponse()
+end
+
+else
+    BotHandler -> BotHandler: injectResponse()
+end
+
+@enduml

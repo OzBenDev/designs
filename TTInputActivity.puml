@@ -1,0 +1,34 @@
+@startuml
+
+(*) -d> "User starts" #SkyBlue
+"User starts" -d> "State Idle" #Gold
+"State Idle" -d> "Clicks on Voice input" #PowderBlue
+"State Idle" --> "Clicks on input view" #PowderBlue
+"Clicks on Voice input" --> "State Speech" #Gold
+"State Speech" --> "starts Voice input"
+"State Speech" -> "Clicks on the keyboard icon"
+"starts Voice input" --d> "Finish Voice input"
+"Finish Voice input" --d> "Start Silence timeout"
+"Start Silence timeout" --> "starts Voice input"
+"starts Voice input" --l> "Escalates on the conversation elements" #PowderBlue
+"Escalates on the conversation elements" --> [<B><font color=red>text input \n<B><font color=red>is empty]"State Idle"
+"Escalates on the conversation elements" ---> "State Send"
+"Start Silence timeout" -d> "Silence timeout"
+"Start Silence timeout" --> "Escalates on the conversation elements"
+"Start Silence timeout" -> "Clicks on the keyboard icon" #PowderBlue
+"Clicks on the keyboard icon" -> "Stop Silence timeout"
+"Stop Silence timeout" -> [<B><font color=red>text input \n<B><font color=red>is empty]"State Idle"
+"Stop Silence timeout" -> "State Send"
+"Clicks on input view" --> "keyboard input"
+"keyboard input" -> [<B><font color=red>text input \n<B><font color=red>is empty] "State Idle"
+"keyboard input" -> "State Send" #Gold
+"State Send" --> "Clicks on Send icon" #PowderBlue
+"State Send" --> "Deletes the text" #PowderBlue
+"Deletes the text" -> "State Idle"
+
+"Silence timeout"-u>[<B><font color=red>Voice input \n<B><font color=red>is empty] "State Idle"
+"Clicks on Send icon" --> "Send message" #SkyBlue
+"Silence timeout" -d> "Send message" #SkyBlue
+"Send message" #SkyBlue -d> (*)
+
+@enduml

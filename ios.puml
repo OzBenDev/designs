@@ -1,0 +1,63 @@
+@startuml
+title Sequence Diagram
+
+participant ChatController
+participant ChatViewController
+participant ChatConfiguration
+participant SynthesizerConfiguration
+participant Synthesizer
+participant User
+participant App
+
+== Initialization ==
+
+ChatController -> ChatViewController: create with Configuration
+ChatViewController -> ChatConfiguration: create
+activate ChatViewController
+ChatConfiguration -> SynthesizerConfiguration: create
+note right: default SynthesizerConfiguration.isEnabled = true
+ChatViewController -> Synthesizer: create with configuration
+group #ff000 if (SynthesizerConfiguration.isEnabled)
+Synthesizer -> ChatViewController: create synthesizer
+else
+Synthesizer -> ChatViewController: return nil
+end
+deactivate ChatViewController
+
+== Walki Talki ==
+
+User -> App: record
+participant SearchView
+participant SearchViewDelegate
+participant SearchViewController
+participant NRSpeechDelegate
+
+App -> SearchView: (IBAction)recordSpeech:(UIButton *)sender
+SearchView -> SearchViewDelegate: shouldStartRecording
+SearchViewDelegate -> SearchViewController: shouldStartRecording
+SearchViewController -> NRSpeechDelegate: delegate = self
+NRSpeechDelegate -> SearchViewController: recordDidEnd -> searchVC.inputSrcType = "ConversationVoice"
+... Some ~~ delay~~ ...
+User -> App: submit text
+App -> SearchView: (IBAction)submit:(UIButton *)sender
+SearchView -> SearchViewDelegate: didSubmitText:(NSString *)text
+SearchViewDelegate -> SearchViewController: didSubmitText:(NSString *)text
+SearchViewController -> ChatViewController: didSubmitText:(NSString *)text
+group #ff000 if (searchVC.inputSrcType = "ConversationVoice")
+    ChatViewController -> Synthesizer: Synthesizer.shouldRead = YES
+end
+participant ChatHandler
+participant BE
+ChatViewController -> ChatHandler: (void)postStatement:(id<StorableChatElement>)statement
+ChatHandler -> BE: (void)postStatement:(id<StorableChatElement>)statement
+... Some ~~ delay~~ ...
+BE -> ChatHandler: (void)presentStatement:(id<StorableChatElement>)statement
+ChatHandler -> TextToSpeechParser: (NSString *)parse((id<StorableChatElement>)statement)
+TextToSpeechParser -> ChatHandler: parsedText
+ChatHandler -> ChatViewController: (void)presentStatement:(id<StorableChatElement>)statement
+ChatHandler -> ChatViewController: (void)readText:(NSString *)text
+ChatViewController -> Synthesizer: readStatement(parsedText)
+ChatViewController -> Synthesizer: Synthesizer.shouldRead = NO
+
+
+@enduml

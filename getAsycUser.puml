@@ -1,0 +1,48 @@
+@startuml
+
+skinparam sequence {
+    ParticipantPadding 40
+    ParticipantBorderColor Blue
+    ActorBorderColor Blue
+
+    LifeLineBorderColor blue
+    LifeLineBackgroundColor #A9DCDF
+    ArrowColor darkBlue
+}
+
+box "App" #Azure
+group AsyncAccount creation
+    App -> AsyncAccount: create AsyncAccount
+    App -> UserInfo: create
+
+    App -> AsyncAccount: setUserInfo(UserInfo)
+
+    group setUserInfo
+        UserInfo -> AsyncAccount: inseart all the user's ExtraData
+    end
+end
+
+end box
+
+box "SDK" #AliceBlue
+
+App -> ChatController: createChat(AsyncAccount)
+
+ChatController -> AsyncHandler: startChat(AccountInfo?)
+AsyncHandler -> AsyncSession: create
+AsyncSession -> AsyncDetails: create
+
+group createAsyncDetails
+
+    AsyncHandler -> AsyncDetails: create (getApiKey(), info.applicationId, userId)
+    AsyncDetails -> UserInfo: create(userId)
+end
+
+== Sending Message ==
+
+AsyncHandler -> AsyncSession: send(timestamp, text)
+AsyncSession -> AsyncSession: create Message(type, "$timestamp", Content(text, timestamp, asyncDetails.UserInfo))
+AsyncSession -> AsyncSession: send(message)
+end box
+
+@enduml

@@ -1,0 +1,48 @@
+@startuml
+
+participant ViewController_Fragment
+
+participant List_Data
+
+participant Adapter
+
+participant ViewHolder
+
+participant DownloadController
+
+participant DataManager
+
+ViewController_Fragment -> Adapter: create(DownloadController::handleRequest, List_Data)
+
+group getItemViewType
+
+group override getItemViewType
+Adapter -> Adapter: return List_Data[position].type
+end
+
+group override OnCreateViewHolder
+    alt viewType == TYPE 1
+        Adapter -> ViewHolder: create TYPE_1(inflated viewType, handleRequest)
+    else
+        Adapter -> ViewHolder: create TYPE_2(inflated viewType, handleRequest)
+    end
+end
+
+group #PeachPuff override onBindViewHolder calls ViewHolder.onBind(List_Data[position])
+
+    group #ivory if the dataObject has a url handle
+        ViewHolder -> DownloadController: handleRequest.invoke(url, T)
+
+        group #LightBlue handleRequest is a function that sends the request \nto the DataManager handleRequest returns a callback
+            DownloadController -> DataManager: fetchData <T>
+            DataManager --> DownloadController: onResponse (t: T)
+        end
+            DownloadController --> ViewHolder: onResponse(t: T)
+            ViewHolder --> Adapter: callback(t:T)
+            Adapter -> List_Data: List_Data[position].update(t)
+            Adapter -> Adapter: notifyDataSetChanged()
+            note left: Can be replaced to notifyItemChanged(position) \nif the Recycler animation has been canceled
+    end
+end
+
+@enduml

@@ -1,0 +1,45 @@
+@startuml
+
+participant ViewController_Fragment
+
+participant UIElementController
+
+participant Adapter
+
+participant ViewHolder
+
+participant TextTagHandler
+
+participant DownloadController
+
+ViewController_Fragment -> UIElementController: create
+
+ViewController_Fragment -> Adapter: create(UIElementController)
+
+Adapter -> ViewHolder: Create
+
+
+group inside the onBind
+Adapter -> ViewHolder: Update(postUpdateCallback)
+end
+
+ViewHolder -> TextTagHandler: getSpannedHtmlWithImages(data, ... , \nUIElementController.downloaderFunction(position), postUpdateCallback)
+
+group ImageGetter
+TextTagHandler -> DownloadController: downloaderFunction.invoke(imageUrl)
+     group #LightBlue handleRequest is a function that sends the request \nto the DataManager handleRequest and returns a callback(Drawable)
+            DownloadController -> DataManager: fetchData <T>
+            DataManager --> DownloadController: onResponse (t: T)
+     end
+     DownloadController -> TextTagHandler: callback(Drawable)
+    TextTagHandler -> TextTagHandler: insert the imageUrl into the article
+    TextTagHandler --> ViewHolder: postUpdateCallback.invoke(position)
+ end
+
+ViewHolder -> UIElementController: postUpdateCallback(position)
+UIElementController -> ViewController_Fragment: onImageLoad(position)
+ViewController_Fragment -> Adapter: notifyItemChanged(position)
+
+
+
+@enduml

@@ -1,0 +1,72 @@
+@startuml
+
+participant BoldChatUiHandler
+participant ChatDelegate
+participant PreChatFormFragment
+participant PreChatAdapter
+participant BaseFormComponent
+Actor User
+
+BoldChatUiHandler -> PreChatFormFragment: Create (PreChatData, Callback)
+
+BoldChatUiHandler -> ChatDelegate: showFragment(PreChatFormFragment)
+
+ChatDelegate -> PreChatFormFragment: Start()
+
+activate PreChatFormFragment
+
+== Form View Creation ==
+
+PreChatFormFragment -> PreChatAdapter: Create
+PreChatFormFragment -> PreChatAdapter: setFormConfiguration()
+
+PreChatFormFragment -> PreChatAdapter: presentForm(PreChatData, formFieldsContainer)
+
+activate PreChatAdapter
+
+Loop formFields.size()
+|||
+    alt formField.type = Text
+        PreChatAdapter ->  BaseFormComponent: create TextInputView
+    else formField.type = Select
+        PreChatAdapter -> BaseFormComponent: create SelectionView
+    end
+            PreChatAdapter --> PreChatAdapter: add field
+|||
+end Loop
+
+deactivate PreChatAdapter
+deactivate PreChatFormFragment
+
+...
+
+Loop Form filling and validating
+
+    User -> PreChatFormFragment: Fills Data
+
+    User -> PreChatFormFragment: "submit" click
+
+    activate PreChatAdapter
+
+    PreChatFormFragment -> PreChatAdapter: validate()
+
+        Loop Validation
+        |||
+            alt field is valid
+                PreChatAdapter --> BaseFormComponent: validate()
+                BaseFormComponent --> PreChatAdapter: getData()
+            else field is invalid
+                BaseFormComponent --> PreChatAdapter: onError
+            end
+        |||
+        end Loop
+
+    PreChatAdapter -> PreChatFormFragment: validationCompleted()
+
+end Loop
+
+deactivate PreChatAdapter
+
+PreChatFormFragment -> BoldChatUiHandler: OnPreChatResult (PreChatData)
+
+@enduml

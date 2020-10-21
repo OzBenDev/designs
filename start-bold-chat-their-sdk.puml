@@ -1,0 +1,72 @@
+@startuml
+actor User
+participant ChatSdk
+participant BoldChatIntegrator
+participant BoldChatSession
+
+
+User -> ChatSdk: select bold channel
+ChatSdk -> BoldChatIntegrator: init(apiKey, visitorId?, dateFormat)
+
+BoldChatIntegrator -> BoldChatSession: create
+BoldChatIntegrator -> BoldChatSession: setListener(BoldChatSessionListener)
+BoldChatIntegrator -> BoldChatSession: setFormListener(formListener)
+BoldChatIntegrator -> BoldChatSession: setExtraData(Map<String, Object>) 'language
+BoldChatIntegrator -> BoldChatSession: setSkipPreChat(true)
+BoldChatIntegrator -> BoldChatSession: setTimeFormat(DateFormat) 'timestamp format
+
+ChatSdk -> BoldChatIntegrator: startChat(listener)
+
+activate BoldChatIntegrator #ffeeee
+
+BoldChatIntegrator -> BoldChatSession: check chat availability
+alt not available
+BoldChatSession --> BoldChatIntegrator: chatAvailabilityListener.onChatUnavailable()
+BoldChatIntegrator --> ChatSdk: listener.error
+end
+
+BoldChatSession --> BoldChatIntegrator: chatAvailabilityListener.onChatAvailable()
+BoldChatIntegrator -> BoldChatSession: start()
+activate BoldChatSession #eeffee
+BoldChatSession --> BoldChatIntegrator: listener.chatSessionCreated
+BoldChatSession --> BoldChatIntegrator: listener.chatSessionStarted
+BoldChatIntegrator --> ChatSdk: listener.chatStarted
+...
+== user message ==
+User --> ChatSdk: type message
+ChatSdk --> BoldChatIntegrator: pass user message
+BoldChatIntegrator --> BoldChatIntegrator: create Message
+BoldChatIntegrator --> BoldChatSession: addMessage(Message)
+...
+== error occurred ==
+alt in case of error
+BoldChatSession --> BoldChatIntegrator: formListener.showForm(Form)
+activate BoldChatIntegrator #dfedff
+BoldChatIntegrator --> BoldChatIntegrator: parse error from Form
+BoldChatIntegrator --> ChatSdk: listener.error
+deactivate BoldChatIntegrator
+end
+
+...
+
+== message arrived ==
+BoldChatSession --> BoldChatIntegrator: listener.operatorTyping
+BoldChatIntegrator --> ChatSdk: listener.chatterTyping
+...
+BoldChatSession --> BoldChatIntegrator: listener.messageArrived
+activate BoldChatIntegrator #dfedff
+BoldChatIntegrator --> BoldChatIntegrator: format message as known response
+BoldChatIntegrator --> ChatSdk: listener.message
+deactivate BoldChatIntegrator
+
+...
+
+== ended by user/operator/error ==
+BoldChatSession --> BoldChatIntegrator: listener.chatSessionEnded
+BoldChatSession --> BoldChatIntegrator: listener.chatSessionClosed
+deactivate BoldChatSession
+BoldChatIntegrator --> ChatSdk: listener.chatEnded
+deactivate BoldChatIntegrator
+
+
+@enduml

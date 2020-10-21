@@ -1,0 +1,29 @@
+@startuml
+title <B><U>SilenceTimeBeforeMessageSend == 0 && Recording no keyboard escalation\n\n
+
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant SpeecherView
+participant InternalSendView
+participant User
+
+User -> ReadoutSendView: Clicks On the Voice input button
+ReadoutSendView ->  ReadoutSendView: setState(State.Speech)
+ChatAutocompleteView -> ChatAutocompleteView: disable keyboard input
+
+User -> SpeecherView: Speaks
+User -> SpeecherView: Stops speaking
+
+group #darkseagreen text.isNotEmpty()
+    ReadoutSendView ->  ReadoutSendView: setState(State.Send)
+    ChatAutocompleteView ->  ChatAutocompleteView: enable keyboard input
+    User -> InternalSendView: Clicks on Send
+    InternalSendView -> ReadoutSendView: onSendClicked
+    ReadoutSendView -> ChatAutocompleteView: onSendInput.invoke()
+    ChatAutocompleteView -> ChatAutocompleteView: onSendInput(text)
+end
+
+ChatAutocompleteView -> ReadoutSendView: setState(State.None)
+ChatAutocompleteView ->  ReadoutSendView: setState(State.None)
+
+@enduml

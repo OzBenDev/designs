@@ -1,0 +1,78 @@
+@startuml
+
+class BoldChatUIHandler
+
+class FormConfiguration
+
+
+BoldChatUIHandler --> PreChatFragment : creates
+
+PreChatFragment ..down|> FormPresenter
+
+
+interface FormConfiguration{
+    getFieldMainTextStyle() : StyleConfig
+    getFieldSecondaryTextStyle() : StyleConfig
+    getFieldBackground() : Int
+    getFieldHeight(): Int
+}
+
+interface FormPresenter{
+    fun showForm()
+    fun validateForm()
+}
+
+abstract class PreChat {
+
+    - List <FormField> FormFields
+    - String Branding
+}
+
+class PreChatData {
+    PreChat
+    branding (specific)
+}
+
+class BoldChatUIHandler{
+    var branding
+    showPreChat()
+}
+
+PreChatData --|> PreChat
+
+class PreChatFragment {
+    - object PreChatData: Form
+    - interface submitListener: FormListener
+    - initFormAdapter(context, container, PreChatData)
+}
+
+PreChatFragment *--> PreChatData
+
+class BoldFormFieldsAdapter {
+    - getTextInputView(formField: FormField): BaseFormComponent?
+    - getSelectionView(formField: FormField): BaseFormComponent?
+    + addFormFields()
+    + validateForm()
+}
+
+ BoldFormFieldsAdapter *--down> FormConfiguration
+
+
+PreChatFragment *-right> BoldFormFieldsAdapter
+
+interface FormComponent{
+    fun setDataAndValidate() : Boolean
+    fun onValidationError()
+    fun getData() : String?
+}
+
+abstract class BaseFormComponent
+
+SelectionView --up|> BaseFormComponent
+TextInputView  --up|> BaseFormComponent
+
+BaseFormComponent ..left|> FormComponent
+
+BoldFormFieldsAdapter *--> BaseFormComponent
+
+@enduml

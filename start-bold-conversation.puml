@@ -1,0 +1,33 @@
+@startuml
+User -> ChatSdk: select bold channel
+ChatSdk --> BoldIntegration: init(apiKey, deviceInfo?, visitorId?)
+ChatSdk --> BoldIntegration: Connect(listener)
+BoldIntegration -> BoldIntegration: init()
+BoldIntegration --> NodeServer: getChat()
+activate NodeServer
+NodeServer --> NodeServer: Bold Apis to create a chat
+...
+NodeServer --> BoldIntegration: ChatDataJson
+deactivate NodeServer
+
+alt Error
+BoldIntegration --> ChatSdk: listener.error(message)
+ChatSdk -> User: Error
+end
+
+BoldIntegration -> BoldSocket: open socket to destination url
+activate BoldSocket
+loop until conversation end
+BoldSocket --> BoldIntegration: send messages
+...
+BoldIntegration --> ChatSdk: listener.receive(message)
+ChatSdk --> User: display message
+User -> ChatSdk: type message
+ChatSdk --> BoldIntegration: pass message
+BoldIntegration --> BoldSocket: pass message
+end
+BoldIntegration <-> BoldSocket: end chat
+deactivate BoldSocket
+
+
+@enduml

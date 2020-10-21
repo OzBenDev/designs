@@ -1,0 +1,25 @@
+@startuml
+== State.None => Ideal State ==
+ReadoutSendView ->  ReadoutSendView: Make sendView Gone
+ReadoutSendView ->  ReadoutSendView: Make readoutView Visible
+ReadoutSendView ->  ReadoutSendView: Make speecherView - not pressed
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.None)
+ChatAutocompleteView -> ChatAutocompleteView: Enable keyboard input
+@enduml
+
+@startuml
+== State.Send => Regular Send State ==
+ReadoutSendView -> ReadoutSendView: hide readoutView
+ReadoutSendView -> ReadoutSendView: present sendIcon
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Send)
+ChatAutocompleteView -> ChatAutocompleteView: Enable keyboard input
+@enduml
+
+@startuml
+== State.Speech => Readout Speech State ==
+ReadoutSendView -> ReadoutSendView: present readoutView
+ReadoutSendView -> SpeecherView: enable STT listening
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Speech)
+ChatAutocompleteView -> ChatAutocompleteView: Disable keyboard input
+
+@enduml

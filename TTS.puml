@@ -1,0 +1,84 @@
+@startuml
+
+package sdkCore{
+
+    interface Parser<T, H>{
+        fun parse(t: T) : H
+    }
+
+}
+
+package accessibility #LightBlue{
+
+    interface TTSConfig{
+        fun setSpeechRate(rate: Float)
+        fun setVolume(volume: Float)
+        fun setVoice(voice: Voice)
+        fun setLanguage(language: Locale)
+        fun setPitch(rate: Float)
+    }
+    
+    interface TTSController implements TTSConfig {
+        fun read(data: Any, onFinished: (() -> Unit)? = null) {}
+        fun stop() {}
+        fun clear() {}
+        fun setActive(active: Boolean) {}
+        fun isSpeaking(): Boolean? { return false }
+    }
+
+   class TTSEngine implements TTSController
+
+}
+
+package UI #DarkSeaGreen{
+
+    class ChatUIHandler
+
+    class ChatTTSConfig implements TTSConfig
+
+    class ChatController{
+       var configuration: Configuration
+       fun initTTS()
+    }
+
+    class NRConversationalFragment {
+        fun setTTS(TTSEngine ttsEngine)
+       var configuration: Configuration
+    }
+
+    class ElementTTSParser<ChatElement, String> implements Parser {
+        fun parse(chatElement: ChatElement): String
+    }
+
+    interface ChatDelegate {
+        fun updateCmp(elementType: ElementType, data: Any)
+        fun updateCmp(elementType: ElementType, data: Map<String, Any>)
+    }
+
+    class TTSCmp implements ChatComponent, TTSController {
+        fun updateData(map: MutableMap<String, Any>)
+    }
+
+    class Configuration implements ChatConfiguration
+
+    interface ChatConfiguration {
+        var ttsConfig: TTSConfig
+    }
+
+    interface ChatComponent
+
+}
+
+ChatUIHandler --d* ElementTTSParser
+ChatController --* ChatUIHandler
+ChatController --* NRConversationalFragment
+ChatController --* Configuration
+NRConversationalFragment --* ChatTTSConfig
+NRConversationalFragment --> ChatUIHandler
+NRConversationalFragment --* ChatDelegate
+ChatDelegate --> TTSCmp
+ChatUIHandler ---> ChatDelegate
+TTSCmp --> TTSEngine
+NRConversationalFragment --* TTSCmp
+
+@enduml

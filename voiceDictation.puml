@@ -1,0 +1,67 @@
+@startuml
+
+skinparam sequence {
+    ParticipantPadding 60
+    ParticipantBorderColor Blue
+    ActorBorderColor Blue
+
+    LifeLineBorderColor blue
+    LifeLineBackgroundColor #A9DCDF
+    ArrowColor darkBlue
+}
+
+Participant User
+Participant ChatAutocompleteView
+
+/'
+Participant NRConversationFragment
+'/
+Participant ChatHandler
+/'
+Participant ChatController
+'/
+Participant Engine
+
+/'
+ChatController -> ChatHandler: create
+
+ChatHandler -> ChatHandler: ChatInputData( onSend implementation )
+ChatHandler -> NRConversationFragment: enableChatInput(ChatInputData)
+
+NRConversationFragment -> NRConversationFragment: createCmp(ComponentType.ChatInputCmp)
+NRConversationFragment -> ChatAutocompleteView: create ChatInputCmp (ChatAutocompleteView came from the ChatInputUIProvider)
+NRConversationFragment -> ChatAutocompleteView: update(ChatInputData)
+'/
+
+group User uses voice
+User -> ChatAutocompleteView: Trigger on voice button
+User -> ChatAutocompleteView: User finishes the voice action
+alt voice input is not empty
+ChatAutocompleteView -> ChatAutocompleteView: inputType = Voice
+User -> ChatAutocompleteView: User edits the text (optional)
+end
+else
+User -> ChatAutocompleteView: Type text
+ChatAutocompleteView -> ChatAutocompleteView: inputType = Key
+end
+
+group User selects an option from AutoComplete
+User -> ChatAutocompleteView: Autocomplete option selection
+ChatAutocompleteView -> ChatAutocompleteView: inputType = Autocomplete
+else
+User -> ChatAutocompleteView: clicks on send
+end
+
+ChatAutocompleteView -> ChatHandler: send the User action with UserInput( inputType, text)
+
+ChatHandler -> Engine: create the request with (UserInput, callback)
+
+group inputType == Voice
+Engine -> Engine: adds "src = ConversationVoice"
+else inputType == Autocomplete
+Engine -> Engine: adds "src = BotAutoComplete"
+end
+
+Engine --> ChatHandler: callback
+
+@enduml

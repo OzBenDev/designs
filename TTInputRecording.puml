@@ -1,0 +1,45 @@
+@startuml
+
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant SpeecherView
+participant User
+
+User -> ReadoutSendView: Clicks On the Voice input button
+ReadoutSendView ->  ReadoutSendView: setState(State.Speech)
+rnote over ChatAutocompleteView, ReadoutSendView #Gold
+      State Speech
+endrnote
+
+User -> SpeecherView: Speaks
+SpeecherView -> ChatAutocompleteView: onPrepared
+ChatAutocompleteView -> ChatAutocompleteView: Start Voice input indication
+User -> SpeecherView: Stops speaking
+SpeecherView -> ChatAutocompleteView: onStop
+ChatAutocompleteView -> ChatAutocompleteView: Stop Voice input indication
+
+SpeecherView -> SpeecherView: started counting <i>SilenceTimeBeforeMessageSend</i> sec
+
+group #ivory User keeps quiet while waiting for the message to be sent automatically
+  SpeecherView -> ReadoutSendView: done waiting
+  ReadoutSendView -> ChatAutocompleteView: onSendClicked
+
+  group #darkseagreen text.isNotEmpty()
+     ChatAutocompleteView -> ChatAutocompleteView: onSendInput.invoke(text)
+     ChatAutocompleteView ->  ReadoutSendView: setState(State.Speech)
+rnote over ChatAutocompleteView, ReadoutSendView #Gold
+      State Speech
+endrnote
+     note Right
+        <b>If the User used Voice input only:</b>
+        The statement is being automatically sent and the State stays Speech
+        (Keeps on listening)
+     end note
+  else
+     ChatAutocompleteView ->  ReadoutSendView: setState(State.None)
+rnote over ChatAutocompleteView, ReadoutSendView #Gold
+      State None
+endrnote
+  end
+end
+@enduml

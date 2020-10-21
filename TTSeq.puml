@@ -1,0 +1,98 @@
+@startuml
+title Sequence Diagram
+
+participant App
+participant ChatController
+participant ChatDelegate
+participant NRConversationalFragment
+participant ChatHandler
+participant TTSCmp
+participant TTSEngine
+participant ChatInputComponent
+participant User
+
+== initialization ==
+
+    ChatController -> NRConversationalFragment: create
+    ChatController -> ChatHandler: create
+    NRConversationalFragment -> ChatController: startChatOnReady
+    ChatController -> ChatHandler: startChat
+    group if TTS isEnabled
+        ChatHandler -> ChatDelegate: updateCmp(VoiceConversation, Pair(TTSParser, parser))
+        group #Gold if TTSCmp doesn't exist
+            NRConversationalFragment -> TTSEngine: create
+            NRConversationalFragment -> TTSCmp: create(TTSEngine)
+        end
+        ChatDelegate -> NRConversationalFragment: updateCmp(VoiceConversation, Pair(TTSParser, parser))
+    end
+
+== Walkie Talkie if TTS isEnabled ==
+
+group  #DarkSeaGreen Configuration injection when Chat Started
+    ChatHandler -> ChatController: handleEvent(ChatStarted)
+    ChatController -> App: onChatStateChanged(ChatStarted)
+
+    App -> ChatController: getConfiguration().getTTSConfig().setVoice(data)
+    ChatController -> NRConversationalFragment: configuration.ttsConfig.setVoice(data)
+    NRConversationalFragment -> TTSCmp: updateCmp(Pair(TTSVoice, data))
+
+    note left
+        	Same for setSpeechRate, setPitch, setVolume
+        	Each method use updateCmp to update the TTS engine's configuration
+    end note
+
+end
+
+User -> ChatInputComponent: voice input
+ChatInputComponent -> ChatHandler: handleEvent(UserInputEvent(source = voice, status == InputInProgress))
+ChatHandler -> ChatDelegate: updateCmp(VoiceConversation, Pair(TTSActiveKey, source == voice) )
+ChatDelegate -> NRConversationalFragment: updateCmp(VoiceConversation,  Pair(TTSActiveKey, source == voice) )
+
+group #DarkSeaGreen source == voice -> TTSEngine is active
+
+    TTSCmp -> TTSEngine: setActive(true)
+    activate TTSEngine #Red
+    TTSEngine -> TTSEngine: Stop()
+
+    User -> ChatInputComponent: clicks on Send
+    ChatInputComponent -> ChatHandler: onSendInput.invoke(text)
+    ChatHandler -> ChatDelegate: injectElement(ChatStatement: element)
+    ChatDelegate -> NRConversationalFragment: injectElement(ChatElement: element) **- Outgoing**
+    group #LightBlue TTSCmp != null
+        NRConversationalFragment -> TTSCmp: read(parsedText)
+        TTSCmp -> TTSEngine: read(element)
+        TTSEngine -> TTSEngine: text = parser.parse(element)
+        note left
+        The text is null because the parser doesn't parse Outgoing elements
+        end note
+       group if isActive && text != null
+               TTSEngine -> TTSEngine: read()
+               TTSEngine -> TTSEngine: setActive(false)
+               TTSEngine -> TTSEngine: Stop()
+               TTSEngine --> TTSCmp: onFinished
+        end
+    end
+   
+    ChatHandler -> ChatHandler: Sends User query to the server
+    ChatHandler -> ChatHandler: response received
+    ChatHandler -> ChatDelegate: injectElement(ChatStatement: element)
+    ChatDelegate -> NRConversationalFragment: injectElement(ChatElement: element) **- Incoming**
+    
+    group #LightBlue TTSCmp != null
+        NRConversationalFragment -> TTSCmp: read(parsedText)
+        TTSCmp -> TTSEngine: read(element)
+        TTSEngine -> TTSEngine: text = parser.parse(element)
+        group if isActive && text != null
+            TTSEngine -> TTSEngine: read()
+            TTSEngine -> TTSEngine: setActive(false)
+            TTSEngine -> TTSEngine: Stop()
+            TTSEngine --> TTSCmp: onFinished
+    deactivate TTSEngine
+    end
+    end
+end
+
+== ChatHandler destruct ==
+ChatHandler -> ChatDelegate: removeCmp(VoiceConversation, true)
+
+@enduml

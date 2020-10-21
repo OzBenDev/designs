@@ -1,0 +1,63 @@
+@startuml
+
+skinparam ParticipantBackgroundColor #lightGray
+skinparam ParticipantBorderColor #Blue
+skinparam ControlBorderColor #Blue
+skinparam ActorBorderColor #Blue
+skinparam LifeLineBackgroundColor #Blue
+skinparam LifeLineBorderColor #Blue
+
+actor User
+participant App
+control ChatController
+participant ChatUI
+participant UIProvider
+participant Handler
+participant BoldChat
+
+== Chat Initialization ==
+
+App -> ChatController: Createz
+ChatController -> Handler: Create
+
+group Handler Creation
+    alt Handler.isLiveChat
+         Handler -> Handler: canBeEndedByUser = true
+     else
+         Handler -> Handler: canBeEndedByUser = false
+    end
+Handler -> Handler: \nendChatButtonPresented = \nconfigurationProvider.isEnabled(endChatButton) && \ncanBeEndedByUser
+end
+
+ChatController -> Handler: \nStartChat
+...
+== Chat Accepted  ==
+
+Handler -> ChatUI: enableCmp(EndChatButton:ComponentType, true)
+
+alt #transparent EndChatButton not exists
+group #FFFFE0 UI component creation
+ChatUI -> UIProvider: create(EndChatButton)
+return EndChatButton
+end
+
+group #87CEFA User clicks on EndChat
+
+	User -> ChatUI: click on EndChatButton
+	ChatUI -> ChatUI: <size:12><font color=blue><b>present EndChatDialog
+	alt #FFF0F5 User approves Chat Ending
+		Handler -> BoldChat: endChat()
+		BoldChat -> Handler: chatEnded()
+		Handler -> ChatController: handleEvent(StateEvent() - Ended)
+		ChatController -> App: onChatStateChanged(stateEvent: StateEvent)
+	else <size:12><font color=blue><b>dismissEndChatDialog()
+	end
+end
+
+== Chat Ending  ==
+
+alt #87CEFA Handler.endChatButtonPresented
+Handler -> ChatUI: enableCmp(EndChatButton:ComponentType, false)
+end
+|||
+@enduml

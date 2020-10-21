@@ -1,0 +1,165 @@
+@startuml
+
+participant App
+participant NRConversationalFragment
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant SpeecherView
+participant InternalSendView
+participant User
+
+== Chat Controller Initialization ===
+
+App -> App : create ChatController with \nReadout = true,  Enable HandsFree = true
+
+== ChatWindowLoaded ==
+
+    group #skyblue EnableChatInput(true)
+        ChatHandler -> ChatHandler: autocompleteConfigEnabled = isEnabled(ChatFeatures.Autocomplete) && !isEnabled(ChatFeatures.Readout)
+        ChatHandler -> ChatHandler: cmpData = ChatInputData(.. autocompleteEnabled( <b> == false </b>) .. , sendViewType( <b> == Readout </b>))
+        ChatHandler -> NRConversationalFragment: updateCmp(ComponentType.ChatInputCmp, cmpData)
+    end
+
+    NRConversationalFragment -> ChatAutocompleteView: updateCmp(ComponentType.ChatInputCmp, cmpData)
+    ChatAutocompleteView -> ChatAutocompleteView: update(cmpData)
+    ChatAutocompleteView -> ChatAutocompleteView: setSendView?.invoke(sendViewType).also{ setSendView = null }
+    note Right
+       <b>Sets the SendView of the autoComplete only once</b>
+    end note
+    ChatAutocompleteView -> ReadoutSendView: create
+    activate ReadoutSendView
+    ChatAutocompleteView -> ChatAutocompleteView: create SpeechedTextListener
+
+    group #skyblue initSendView
+        ChatAutocompleteView -> ReadoutSendView: setOnClickListener(OnClickListener)
+        ReadoutSendView -> InternalSendView: setOnClickListener(OnClickListener)
+    end
+
+    group #skyblue initSpeecherView
+        ReadoutSendView -> SpeecherView: create
+        ChatAutocompleteView -> ReadoutSendView: registerSpeechListener(listener: SpeechedTextListener)
+        ReadoutSendView -> SpeecherView: registerListener(listener)
+        ReadoutSendView -> SpeecherView: enable partial results
+        note Right
+            <b>configurations to be added</b>
+        end note
+        ReadoutSendView -> SpeecherView: setSilenceTimeBeforeMessageSend to 2 sec
+        note Right
+            <b>configuration to be added</b>
+        end note
+    end
+
+    ChatAutocompleteView -> ChatAutocompleteView: addView(ReadoutSendView)
+    deactivate ReadoutSendView
+
+== Chat Started ==
+
+    group #skyblue  User action == Voice
+
+        User -> ReadoutSendView: Clicks On the Voice input button
+
+        group #gold <i>SilenceTimeBeforeMessageSend</i> == 0
+             ReadoutSendView -> ChatAutocompleteView: onError
+             ChatAutocompleteView -> NRConversationalFragment: onError
+
+        else <i>SilenceTimeBeforeMessageSend</i> > 0
+
+        ReadoutSendView ->  ReadoutSendView: setState(State.Speech)
+        ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Speech, disable Keyboard)
+
+
+            User -> SpeecherView: Speaks
+            User -> SpeecherView: Stops speaking
+
+
+                SpeecherView -> SpeecherView: started counting <i>SilenceTimeBeforeMessageSend</i> sec
+
+
+               group #ivory User Clicks on the keyboard icon
+                     User -> ReadoutSendView: Clicks On the Keyboard icon
+                     ReadoutSendView -> SpeecherView: Stop counting SilenceTimeBeforeMessageSend
+                      note Right
+                          <b>message won't be sent automatically</b>
+                          If the User escalates the Keyboard icon, he needs to send the message by clicking on the Send button
+                          The SilenceTimeBeforeMessageSend clock is being canceled
+                       end note
+                     ReadoutSendView -> ReadoutSendView: setState(State.None)
+                     ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.None, enable Keyboard)
+                     ChatAutocompleteView -> ChatAutocompleteView: enable keyboard input
+                     User -> ChatAutocompleteView: text input by keyboard
+                     ChatAutocompleteView -> ReadoutSendView: setState(State.Send)
+                     group #darkseagreen if text.IsNotEmpty()
+                        User -> InternalSendView: Clicks on Send
+                        InternalSendView -> ReadoutSendView: onSendClicked
+                        ReadoutSendView -> ChatAutocompleteView: onSendInput.invoke()
+                        ChatAutocompleteView -> ChatAutocompleteView: onSendInput(text)
+                        ChatAutocompleteView -> ChatAutocompleteView: clear text
+                        ChatAutocompleteView -> ReadoutSendView: setState(State.None)
+                        ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.None)
+                     end
+
+                else User keeps quiet while waiting for the message to be sent automatically
+                       SpeecherView -> ReadoutSendView: done waiting
+                       ReadoutSendView -> ChatAutocompleteView: SilenceTimeBeforeMessageSendPassed.invoke()
+
+                       group #darkseagreen text.isNotEmpty()
+                          ChatAutocompleteView -> ChatAutocompleteView: onSendInput.invoke(text)
+                          ChatAutocompleteView ->  ReadoutSendView: setState(State.Speech)
+                          note Right
+                             <b>If the User used Voice input only:</b>
+                             The statement is being automatically sent and the State stays Speech
+                             (Keeps on listening)
+                          end note
+                       else
+                          ChatAutocompleteView ->  ReadoutSendView: setState(State.None)
+                       end
+                end
+
+            group #darkseagreen text.isNotEmpty()
+                ReadoutSendView ->  ReadoutSendView: setState(State.Send)
+                ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Send, enable keyboard)
+                ChatAutocompleteView ->  ChatAutocompleteView: enable keyboard input
+                User -> InternalSendView: Clicks on Send
+                InternalSendView -> ReadoutSendView: onSendClicked
+                ReadoutSendView -> ChatAutocompleteView: onSendInput.invoke()
+                ChatAutocompleteView -> ChatAutocompleteView: onSendInput(text)
+            end
+
+            ChatAutocompleteView -> ReadoutSendView: setState(State.None)
+            ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.None)
+            ChatAutocompleteView ->  ReadoutSendView: setState(State.None)
+     end
+
+     end
+
+    group #skyblue User action == Keyboard input
+        User -> ChatAutocompleteView: Clicks On InputField
+        ChatAutocompleteView ->  ReadoutSendView: setState(State.Send)
+        User -> ChatAutocompleteView: Input Text
+        User -> InternalSendView: Clicks on the Send button
+        InternalSendView --> ChatAutocompleteView
+        ChatAutocompleteView -> ChatAutocompleteView: onSendInput.invoke()
+        ChatAutocompleteView ->  ReadoutSendView: setState(State.None)
+    end
+
+
+== State.None => Ideal State ==
+ReadoutSendView ->  ReadoutSendView: Make sendView Gone
+ReadoutSendView ->  ReadoutSendView: Make readoutView Visible
+ReadoutSendView ->  ReadoutSendView: Make speecherView - not pressed
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.None)
+ChatAutocompleteView -> ChatAutocompleteView: Enable keyboard input
+
+== State.Send => Regular Send State ==
+ReadoutSendView -> ReadoutSendView: hide readoutView
+ReadoutSendView -> ReadoutSendView: present sendIcon
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Send)
+ChatAutocompleteView -> ChatAutocompleteView: Enable keyboard input
+
+== State.Speech => Readout Speech State ==
+ReadoutSendView -> ReadoutSendView: present readoutView
+ReadoutSendView -> SpeecherView: enable STT listening
+ReadoutSendView --> ChatAutocompleteView: onStateChanged(State.Speech)
+ChatAutocompleteView -> ChatAutocompleteView: Disable keyboard input
+
+@enduml

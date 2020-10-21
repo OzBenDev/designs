@@ -1,0 +1,30 @@
+@startuml
+
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant InternalSendView
+participant User
+
+User -> ChatAutocompleteView: Clicks On the input view
+User -> ChatAutocompleteView: starts typing
+
+group #PowderBlue text.isNotEmpty
+    ChatAutocompleteView ->  ReadoutSendView: setState(State.Send)
+   rnote over ChatAutocompleteView, ReadoutSendView #Gold
+         State Send
+   endrnote
+
+    ChatAutocompleteView -> ChatAutocompleteView: enable keyboard input
+
+    User -> ChatAutocompleteView: text input by keyboard
+    User -> InternalSendView: Clicks on Send
+    InternalSendView -> ReadoutSendView: onSendClicked
+    ReadoutSendView -> ChatAutocompleteView: onSendClicked
+    ReadoutSendView ->  ReadoutSendView: setState(State.None)
+       rnote over ChatAutocompleteView, ReadoutSendView #Gold
+             State None
+       endrnote
+    ChatAutocompleteView -> ChatAutocompleteView: onSendInput(text)
+    ChatAutocompleteView -> ChatAutocompleteView:  onSendInput.invoke(text)
+end
+@enduml

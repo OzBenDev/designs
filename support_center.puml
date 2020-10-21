@@ -1,0 +1,54 @@
+@startuml
+
+participant User
+
+participant activity
+
+participant ListFragment
+
+participant ArticleFragment
+
+participant Adapter
+
+participant FAQDataSource
+
+participant Downloader
+
+
+== First initialization ==
+
+activity -> ListFragment: newInstance( FAQDataSource() )
+
+ListFragment -> FAQDataSource: setLabelId(String id, callback)
+
+group labelID == null
+    FAQDataSource -> Downloader: getLabels
+    Downloader -> FAQDataSource: callback(labels)
+    FAQDataSource -> ListFragment: callback(labels)
+    ListFragment -> Adapter: notifyDataSetChanged()
+end
+
+
+== User Clicks on label ==
+
+User -> Adapter: preform Click
+
+ListFragment -> ListFragment: newInstance( FAQDataSource Ref )
+
+ListFragment -> FAQDataSource: setLabelId(String id, callback)
+
+group labelID != null
+    FAQDataSource --> ListFragment: callback(labels)
+    ListFragment -> Adapter: notifyDataSetChanged()
+    FAQDataSource -> Downloader: getFaqs(labelID)
+    Downloader -> FAQDataSource: callback(faqs)
+    FAQDataSource --> ListFragment: callback(faqs)
+    ListFragment -> Adapter: notifyDataSetChanged()
+end
+
+== User Clicks on FAQ ==
+
+Adapter -> ListFragment: onFaqClicked()
+ListFragment -> ArticleFragment: newInstance( faqId )
+
+@enduml

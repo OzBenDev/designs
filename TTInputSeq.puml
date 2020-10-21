@@ -1,0 +1,55 @@
+@startuml
+
+participant App
+participant NRConversationalFragment
+participant ChatAutocompleteView
+participant ReadoutSendView
+participant SpeecherView
+participant InternalSendView
+participant User
+
+== Chat Controller Initialization ===
+
+App -> App : create ChatController with \nReadout = true,  Enable HandsFree = true
+
+== ChatWindowLoaded ==
+
+    group #skyblue EnableChatInput(true)
+        ChatHandler -> ChatHandler: autocompleteConfigEnabled = isEnabled(ChatFeatures.Autocomplete) && !isEnabled(ChatFeatures.Readout)
+        ChatHandler -> ChatHandler: cmpData = ChatInputData(.. autocompleteEnabled( <b> == false </b>) .. , sendViewType( <b> == Readout </b>))
+        ChatHandler -> NRConversationalFragment: updateCmp(ComponentType.ChatInputCmp, cmpData)
+    end
+
+    NRConversationalFragment -> ChatAutocompleteView: updateCmp(ComponentType.ChatInputCmp, cmpData)
+    ChatAutocompleteView -> ChatAutocompleteView: update(cmpData)
+    ChatAutocompleteView -> ChatAutocompleteView: setSendView?.invoke(sendViewType).also{ setSendView = null }
+    note Right
+       <b>Sets the SendView of the autoComplete only once</b>
+    end note
+    ChatAutocompleteView -> ReadoutSendView: create
+    activate ReadoutSendView
+    ChatAutocompleteView -> ChatAutocompleteView: create SpeechedTextListener
+
+    group #skyblue initSendView
+        ChatAutocompleteView -> ReadoutSendView: setOnClickListener(OnClickListener)
+        ReadoutSendView -> InternalSendView: setOnClickListener(OnClickListener)
+    end
+
+    group #skyblue initSpeecherView
+        ReadoutSendView -> SpeecherView: create
+        ChatAutocompleteView -> ReadoutSendView: registerSpeechListener(listener: SpeechedTextListener)
+        ReadoutSendView -> SpeecherView: registerListener(listener)
+        ReadoutSendView -> SpeecherView: enable partial results
+        note Right
+            <b>configurations to be added</b>
+        end note
+        ReadoutSendView -> SpeecherView: setSilenceTimeBeforeMessageSend to 2 sec
+        note Right
+            <b>configuration to be added</b>
+        end note
+    end
+
+    ChatAutocompleteView -> ChatAutocompleteView: addView(ReadoutSendView)
+    deactivate ReadoutSendView
+
+@enduml
