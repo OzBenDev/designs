@@ -1,0 +1,38 @@
+@startuml
+
+interface Notifiable {
+    fun onNotify(notification: Notification, dispatcher: DispatchContinuation)
+    fun getNotifications()
+}
+
+class ChatElement
+
+class SystemChatElement extends ChatElement
+
+class NotifiableSystemElement  #lightblue extends SystemChatElement implements Notifiable {
+    var notifications
+    override fun onNotify() { ... }
+}
+
+class RemovableSystemElement extends NotifiableSystemElement
+
+interface StickyElement  #lightblue {
+    fun getUpdateNotification() = Notifications.UpdateSticky
+}
+
+class StickySystemElement  #lightblue extends RemovableSystemElement implements StickyElement {
+
+    override val isRemovable: Boolean = true
+
+    override fun notifications(): ArrayList<String> { return super.notifications().apply { add(getUpdateNotification()) }}
+}
+
+class ChatStatement
+
+class SystemStatement extends ChatStatement
+
+class NotifiableSystemStatement #lightblue extends SystemStatement
+
+class RemovableSystemStatement extends NotifiableSystemStatement
+
+@enduml

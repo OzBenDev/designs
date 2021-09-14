@@ -1,0 +1,59 @@
+@startuml
+
+
+interface ChatType {
+    String LiveChat = "live";
+    String AsyncChat = "async";
+    String BotChat = "bot";
+}
+
+interface AccountController {
+    val onAccountReady: (account, isRestore)
+}
+
+class AccountFormController implements AccountController {
+    val containerRes: Int?
+    val wFragmentManager: WeakReference(FragmentManager)?
+    val @ChatType chatType: String?
+    val formPresenter: AccountFormPresenter
+}
+
+interface AccountDataHandler implements AccountController {
+    var isRestore: Boolean
+    fun onSubmit(account, chatType)
+    fun getAccount(@ChatType chatType: String) // Gets the prev account from the shared properties (according to the ChatType) \n                                                                                      If null it returns the default account
+    fun updateAccount(@ChatType chatType: String, account: Account) // If changed, updates the shared properties to include the updated account details
+}
+
+interface AccountFormPresenter{
+    val containerRes: Int
+    val wFragmentManager: WeakReference(FragmentManager)
+    val accountDataHandler: AccountFormDataHandler?
+    @ChatType val chatType: String
+
+    fun presentAccountForm()
+    fun presentRestoreForm(onChatRestore(@ChatType chatType: String, isRestore: Boolean)-> Unit)
+}
+
+interface AccountFormDelegate {
+    val dataHandler: AccountFormDataHandler
+    val @ChatType chatType: String
+    val onAccountReady: () -> Unit // being invoked after form submission
+    val formLayoutRes: Int
+    fun fillFields() // Takes the fields data from the shared properties
+    fun validateFormData(): Account? //Validates the form data
+    val onSubmit(account: Account)
+}
+
+abstract class AccountFragment extends Fragment implements AccountFormDelegate {
+    companion newInstance(@ChatType chatType: String, dataHandler: AccountFormDataHandler, onAccountReady: () -> Unit) // Creates the relevant form by the ChatType
+}
+
+class BotAccountFragment extends AccountFragment
+class LiveAccountFragment extends AccountFragment
+
+AccountFormController *--up> AccountFormPresenter
+AccountFormPresenter *--up> AccountDataHandler
+
+
+@enduml

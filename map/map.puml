@@ -1,0 +1,83 @@
+@startuml
+
+left to right direction
+
+Node "App" {
+    [ChatController][[https://logmein-bold-mobile.github.io/bold360-mobile-docs-android/docs/chat-configuration/extra/chatcontroller/]] #Application
+    [ConversationSettings]
+}
+
+[ChatController] ----> Providers
+[ChatController] ----> Handlers
+[ChatController] -----> Listeners
+[ChatController] -----> SDK_UI
+[ChatController] -> ConversationSettings
+
+package "SDK" #Application{
+
+    package "Providers" #Azure{
+        [UIProvider]
+        [accountProvider]
+        [formProvider]
+        [entitiesProvider]
+        [ttsReadAlterProvider]
+    }
+
+    package "Handlers" #Azure{
+        [HandoverHandler]
+        [chatElementListener (History Provider)]
+    }
+
+    package "Listeners" #Azure{
+        [chatEventListener]
+        [accountProvider]
+        [formProvider]
+    }
+
+    package "SDK_UI" #Azure {
+        [ChatFragment]
+    }
+
+    package "ConversationSettings" #Azure{
+
+        () "Enable/Disable" as enabledisable
+        () "Config" as Config
+
+        frame "UI Components" #Lavender{
+          [Datestamp Settings] ---> [floating datestamp]
+
+          [Datestamp Settings] -- Config
+          [TextStyleConfig Settings] -- Config
+          [timestamp Settings] -- Config
+          [readMoreThreshold] -- Config
+
+          [floating datestamp] -- enabledisable
+          [TypingIndication] -- enabledisable
+          [LiveChatBar] -- enabledisable
+          [ChatScroller] -- enabledisable
+          [timestamp Settings] -- enabledisable
+          [Datestamp Settings] -- enabledisable
+          [UploadIndication] -- enabledisable
+        }
+
+        frame "Multimedia Components" #Lavender {
+          [Voice Settings] -- Config
+        }
+
+        frame "Chat features" #Lavender {
+            [Feedback] -- enabledisable
+            [LiveAgent] -- enabledisable
+            [LiveAgent] --> [MultiRequestsOnLiveAgent]
+            [MultiRequestsOnLiveAgent] -- enabledisable
+            [AutoComplete] -- enabledisable
+            [OfflineRequests] --> enabledisable
+
+            [EndLiveChatSupport] -- enabledisable
+            [ChatLogs] -- enabledisable
+            [Feedback] -- Config
+        }
+    }
+
+}
+
+@enduml

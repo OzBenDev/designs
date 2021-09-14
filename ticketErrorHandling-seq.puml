@@ -1,0 +1,118 @@
+@startuml  Seq EventsViewModel observation
+
+actor User
+participant App
+participant ChatController
+participant ChatFragment
+box "<font color=blue size=18><b>Events Observation</b>" #LightGray
+participant ChatHandler
+participant TicketViewModel
+end box
+participant TicketFragment
+participant WebView
+
+User -> App: Starts
+
+== Initialization ==
+
+App -> ChatController: Creates
+ChatController -> ChatFragment: Creates
+ChatController -> ChatHandler: Creates
+App -> ChatController: register to notificatification \n<b>TicketFormSubmissionResults</b>
+User -> ChatFragment: escalates a ticket channel
+ChatFragment -> ChatHandler: pass message event
+ChatHandler -> ChatHandler: reportChanneling 
+ChatHandler -> TicketFragment: creates
+TicketFragment -> WebView: creates
+TicketFragment -> WebView: sets WebChromeClient and WebViewClient (listeneres)
+ChatHandler -> TicketViewModel: fetches
+activate TicketViewModel
+ChatHandler -[#Blue]> TicketViewModel: <font color=blue><b>Observes 'onEvent'
+
+== Scenarios ==
+
+group #Pink if an error occurred
+WebView -> TicketFragment: onReceivedError
+TicketFragment -> TicketViewModel: onEventCall(ErrorEvent...)
+TicketViewModel -[#Blue]-> ChatHandler: <font color=blue><b>onEvent \n(ErrorEvent)
+ChatHandler -> ChatController: handle(ErrorEvent)
+ChatController -> App: OnError
+end
+
+group #LightBlue Loop - Upload Request
+User -> WebView: Presses on file upload
+
+WebView -> TicketFragment: onShowFileChooser(filePathCallback)
+
+note right
+WebChromeClient 
+Listener function
+end note
+
+TicketFragment -> TicketViewModel: sets filePathCallback
+TicketViewModel -[#Blue]-> ChatHandler: <font color=blue><b>onEvent \n(UserEvent( ActionFileUpload, data = FileChooserParams ))
+
+note right
+FileChooserParams contains the chooser mode: 
+MODE_OPEN = 0 - Open single file
+MODE_OPEN_MULTIPLE = 1 - Open multiple files
+MODE_OPEN_FOLDER = 2;
+MODE_SAVE = 3;
+end note
+
+ChatHandler -> ChatController: handleEvent(UserEvent)
+ChatController -> App: onUploadFileRequest
+App -> App: Presents File Chooser \nAccording to the fileChooserMode
+User -> App: Selects a file
+App --> ChatController: uploadFile(uploadInfo)
+ChatController -> ChatHandler: uploadFile(uploadInfo: FileUploadInfo)
+ChatHandler -> TicketViewModel: filePath
+alt #LimeGreen  filePath != null
+TicketViewModel -> WebView: filePathCallback(filePath)
+
+note right
+The filePathCallback can be used
+once per file chooser presentation
+end note
+
+WebView -> User: Presents the files
+TicketViewModel -> TicketViewModel: filePathCallback = null
+else #Pink
+TicketViewModel -[#Blue]-> ChatHandler: <font color=blue><b>onEvent \n(ErrorEvent)
+ChatHandler -> ChatController: handle(ErrorEvent)
+ChatController -> App: OnError
+end
+end
+
+group #LightYellow User dismisses the Ticket (by Submission/Cancelation)
+
+User -> WebView: Submits/Cancels
+WebView -> WebView: Submits/Cancels (Script's Work)
+WebView -> TicketFragment: shouldOverrideUrl(WebView, Url) 
+
+alt #LimeGreen url.getQueryParameter("result") == 2 || url.getQueryParameter("result") == null
+TicketFragment -> TicketViewModel: onEventCall(SubmissionEvent("Ticket submission succes")...)
+TicketViewModel -[#Blue]-> ChatHandler: <font color=blue><b>onEvent \n(SubmissionEvent)
+ChatHandler -> ChatController: handle(SubmissionEvent)
+ChatController -> App: notify(TicketFormSubmissionResults)
+TicketFragment -> TicketFragment: pops
+
+else #LightGray url.getQueryParameter("result") == 3 (when files are being uploaded)
+    TicketFragment -> TicketFragment: waiting for upload result
+
+else #Pink url.getQueryParameter("result") == 4 
+
+    TicketFragment -> TicketViewModel: onEventCall(SubmissionEvent("Ticket submission error")...)
+
+    TicketViewModel -[#Blue]-> ChatHandler: <font color=blue><b>onEvent \n(SubmissionEvent)
+
+    ChatHandler -> ChatController: handle(SubmissionEvent)
+
+    ChatController -> App: notify(TicketFormSubmissionResults)
+
+end
+
+end
+
+
+@enduml

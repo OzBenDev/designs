@@ -1,0 +1,50 @@
+@startuml Class EventsViewModel observation
+
+abstract class EventsViewModel extends ViewModel {
+
+   - val event = SingleLiveData<Event>()
+   - val postRequest = SingleLiveData<Pair<StatementRequest, OnDataResponse<*>>>()
+
+
+   + val onEvent: SingleLiveData<Event>
+   + val onPostRequest: SingleLiveData<android.util.Pair<StatementRequest, OnDataResponse<*>>>
+
+   + fun onEventCall(eventCall: Event)
+
+}
+
+class BaseChatHandler {
+    + fun uploadFile()
+}
+
+class BaseChatUIHandler extends BaseChatHandler{
+    + fun <reified MODEL: EventsViewModel> observeLiveEvents()
+}
+
+class TicketViewModel extends EventsViewModel {
+    - var filePathCallback
+    + var filePath
+    + fun setFilePathCallback(ValueCallback<Uri[]> filePathCallback)
+}
+
+
+class ArticleViewModel extends EventsViewModel
+
+BotChatUIHandler "creates" --down> TicketFragment
+TicketFragment "creates" --down> TicketViewModel
+
+BotChatUIHandler *--> BotChatHandler
+
+class BotChatHandler extends BaseChatHandler {
+    + override fun uploadFile()
+}
+
+
+class BotChatUIHandler extends BaseChatUIHandler {
+    + override fun uploadFile()
+}
+
+BotChatUIHandler "\nobserves" <|-.-.-.-|>  TicketViewModel
+
+
+@enduml

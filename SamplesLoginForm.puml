@@ -1,0 +1,87 @@
+@startuml
+
+actor User
+participant MainActivity
+participant SampleActivity
+participant ChatRestoreActivity
+control AccountFormController
+participant AccountFormPresenter
+participant RestoreForm
+participant AccountForm
+participant AccountDataHandler
+database SharedPrefs
+
+== Any Sample but ChatRestore ==
+
+User -> MainActivity: Selects a sample
+
+group #LightBlue PresentAccountForm
+
+        MainActivity -> AccountFormController: create (chatType, container, fragmentManager, onAccountReady: (account, isRestore))
+        AccountFormController -> AccountFormPresenter: create (chatType, container, fragmentManager, onAccountReady: (account, isRestore))
+        AccountFormPresenter -> AccountDataHandler: create (onAccountReady: (account, isRestore))
+
+        group #Ivory chatType == null **=> Restore Sample**
+            AccountFormController -> AccountFormPresenter: presentRestoreForm(onChatRestore(chatType: ChatType, isRestore: Boolean)-> Unit)
+            AccountFormPresenter -> RestoreForm: newInstance(onChatRestore)
+            activate RestoreForm
+            AccountFormPresenter -> RestoreForm: present
+            User -> RestoreForm: Selects chatType
+            User -> RestoreForm: Selects Restore/Create
+            RestoreForm -> AccountFormController: onChatRestore(chatType, isRestore)
+            deactivate RestoreForm
+            AccountFormController -> AccountDataHandler: set(isRestore)
+        end
+
+        AccountFormController -> AccountFormPresenter: presentAccountForm()
+        AccountFormPresenter -> AccountForm: newInstance(chatType, AccountDataHandler)
+        activate AccountForm
+        AccountFormPresenter ->  AccountForm: present AccountForm
+
+        AccountForm -> AccountDataHandler: getAccount(chatType)
+
+        group #Ivory gets the account
+            AccountDataHandler -> SharedPrefs: gets Account Data
+            SharedPrefs -> AccountDataHandler: prev Account data
+
+            alt #LightYellow if (prev Account data == null)
+                AccountDataHandler -> AccountDataHandler: account = defaultAccount
+            else
+                AccountDataHandler -> AccountDataHandler: account = prev Account data
+            end
+        end
+
+        AccountDataHandler -> AccountForm: account
+        AccountForm -> AccountForm: fillFields (account)
+
+        group #Ivory User modifies fields
+            User -> AccountForm: edits the fields
+        end
+
+        loop #Ivory
+            User -> AccountForm: clicks on "Submit"
+
+            AccountForm -> AccountForm: validateFormData
+
+            group #lightYellow form data is valid
+                AccountForm -> AccountDataHandler: onSubmit(account, chatType)
+
+                group if account changed
+                    AccountDataHandler -> SharedPrefs: updateAccount(chatType,account)
+                end
+
+                AccountDataHandler -> MainActivity: onAccountReady(account, isRestore)
+            else
+                AccountForm -> AccountForm: presentError
+            end
+        end
+       deactivate AccountForm
+    end
+
+group SampleActivity != ChatRestore
+    MainActivity -> SampleActivity: start(account)
+else
+    MainActivity -> ChatRestoreActivity: start(account, isRestore)
+end
+
+@enduml

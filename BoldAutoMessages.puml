@@ -1,0 +1,110 @@
+@startuml
+skinparam sequenceGroupFontColor FireBrick
+skinparam sequenceGroupFontSize 14
+skinparam sequenceGroupFontStyle Italic
+
+title <U><size:24>Bold AutoMessages handling - new flows coloured in <color #0000FF>Blue</color>\n
+participant User
+participant RecyclerAdapter
+participant StickySystemElement
+participant Presenter_Fragment
+participant BoldChatUIHandler
+participant BoldChatHandler
+participant BoldChat
+participant BoldChatSession
+participant VisitorMessageListener
+
+control Server
+
+== User starts Bold Chat (in short - exist flow) ==
+User -> BoldChatUIHandler : submit preChat
+BoldChatUIHandler -> BoldChatHandler : submit preChat
+BoldChatHandler -> BoldChat : submit preChat
+BoldChat -> Server : submit preChat
+Server -> BoldChatSession: onChatStarted
+BoldChatSession -> BoldChat: onChatStarted
+BoldChat -> BoldChatHandler: onChatStarted
+BoldChatHandler -> BoldChatUIHandler: onChatStarted
+BoldChatUIHandler -[#0000FF]> StickySystemElement: create Notifications = ChatAccepted ,ChatEnd\n, content = waitingForAgent (from Brandings)\n, scope = it.scope
+
+BoldChatUIHandler -[#0000FF]> Presenter_Fragment: injectElement(stickySystemElement)
+
+note left: First StickySystemElement injected, \nit is also being registered to the notifications
+
+
+== Bold live chat started ==
+
+group #lightYellow Loop - Multiple AutoMessages can arrive before chat acceptance
+
+    Server -> VisitorMessageListener: autoMessage(text)
+    VisitorMessageListener -[#0000FF]> BoldChatSession: onAutoMessage(text)
+    BoldChatSession -[#0000FF]> BoldChat: messageArrived(content = text, \n sender = PersonType.System.toString(), \nDate = Date(System.currentTimeMillis())
+    BoldChat -[#0000FF]> BoldChatHandler: messageArrived( ... )
+
+    alt #lightblue sender == PersonType.System
+        BoldChatHandler -[#0000FF]> BoldChatHandler: response = create SystemStatement( ... )
+    else
+        BoldChatHandler -> BoldChatHandler: response = create IncomingStatement( ... )
+    end
+
+    BoldChatHandler -> BoldChatUIHandler: passEvent(MessageEvent(response))
+
+    group HandleMessageEvent
+
+       alt #lightblue message is SystemStatement && chatStarted (waiting for acceptance)
+           BoldChatUIHandler -[#0000FF]> Presenter_Fragment: chatDelegate?.notify(Notification(Notifications.ClearSticky))
+
+           group Removes the previously injected StickySystemElement
+               Presenter_Fragment -> StickySystemElement: onNotify (via the NotificationsDispatcher)
+               group StickySystemElement onNotify
+                      StickySystemElement -> Presenter_Fragment: notify(Notifications.RemovablesUpdate, elementId)
+                      note left: the Fragment's contained BroadcastReceiver \nis the registered dispatcher for this notification
+               end
+
+               group Fragment (contained BroadcastReceiver) onNotify
+                   Presenter_Fragment -> RecyclerAdapter: removeElement(elementId)
+                   note left: Removes the previously \ninjected StickySystemElement
+               end
+           end
+
+           BoldChatUIHandler -[#0000FF]> StickySystemElement: create Notifications = ChatAccepted ,ChatEnd\n, content = it.text\n, scope = it.scope
+           BoldChatUIHandler -[#0000FF]> Presenter_Fragment: injectElement(stickySystemElement)
+       else
+           BoldChatUIHandler -> Presenter_Fragment: inject(message)
+       end
+
+    end
+
+end
+|||
+
+== User injects a new message before chat acceptance ==
+
+group #lightYellow Loop - Multiple messages can be sent by the user before acceptance
+
+    User -> BoldChatUIHandler: post(message) - through the inputCmp
+    BoldChatUIHandler -> Presenter_Fragment: inject(message)
+
+    note left: Injects the outgoing message
+
+    Presenter_Fragment -> RecyclerAdapter: addElement(message)
+
+    group #lightblue Adds Element to the chat
+        RecyclerAdapter -[#0000FF]> RecyclerAdapter: counts stickyElements
+
+        alt hasHeader
+            RecyclerAdapter -> RecyclerAdapter: create and add header
+            RecyclerAdapter -[#0000FF]> RecyclerAdapter: addMessage between the header and the stickyElements
+        else
+            RecyclerAdapter -[#0000FF]> RecyclerAdapter: addMessage above the stickyElements
+        end
+    end
+end
+
+== Chat Accepted or Ended ==
+
+BoldChatUIHandler -> BoldChatUIHandler: handleState( accepted / ended)
+BoldChatUIHandler -> Presenter_Fragment: notify(event.state)
+note left: Notifies ChatAccepted or ChatEnd (<color #0000FF>removes the stickyElements</color>)
+
+@enduml

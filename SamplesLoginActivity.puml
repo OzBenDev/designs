@@ -1,0 +1,52 @@
+@startuml
+
+(*) -d> "User starts the App" #SkyBlue
+
+"User starts the App" -> [User selects any \n other sample]"AccountForm" #Pink
+"User starts the App" -> [User selects \n ChatRestore sample]"ChatRestore"
+
+"ChatRestore" -d> "RestoreFragment"
+
+"RestoreFragment" -d> [User selects an account type] "AccountForm"
+"AccountForm" -d> "BotChat" #LightGreen
+"AccountForm" -d> "History" #LightGreen
+"AccountForm" -d> "WELCOME_BotChat" #LightGreen
+"AccountForm" -d> "CustomedWelcomeBotChat" #LightGreen
+"AccountForm" -d> "BotVocToVocChat" #LightGreen
+"AccountForm" --d> "Handover" #LightGreen
+"AccountForm" --d> "BoldChatAsync" #LightGreen
+"AccountForm" ----d> "AsyncChatContinuity" #LightGreen
+"AccountForm" ----d> "BoldChatAvailability" #LightGreen
+"AccountForm" ----d> "BoldCustomChatForm" #LightGreen
+"AccountForm" ----d> "PrechatExtraData" #LightGreen
+"AccountForm" ----d> "CustomFileUpload" #LightGreen
+"AccountForm" ----d> "BoldUploadNoUI" #LightGreen
+"AccountForm" --d> "CustomUIChat" #LightGreen
+"AccountForm" -----d> "Autocomplete" #LightGreen
+"AccountForm" -----d> "EntitiesProviderChat" #LightGreen
+
+"BoldChatAvailability" -> "BoldAvailability"
+"BoldAvailability" -> "BoldChatAvailability"
+"CustomUIChat" -d> [User selects \n customization/configuration]"CustomizedUI"
+
+"CustomizedUI" -d> "ChatStarts"
+"BoldChatAsync" -d> "ChatStarts"
+"AsyncChatContinuity" -d> "ChatStarts"
+"BoldChatAvailability" -d> "ChatStarts"
+"BoldCustomChatForm" -d> "ChatStarts"
+"Autocomplete" -d> "ChatStarts"
+"BoldUploadNoUI" -d> "ChatStarts"
+"BotChat" -d> "ChatStarts"
+"History" -d> "ChatStarts"
+"WELCOME_BotChat" -d> "ChatStarts"
+"CustomedWelcomeBotChat" -d> "ChatStarts"
+"BotVocToVocChat" -d> "ChatStarts"
+"Handover" -d> "ChatStarts"
+"EntitiesProviderChat" -d> "ChatStarts"
+"PrechatExtraData" -d> "ChatStarts"
+"CustomFileUpload" -d> "ChatStarts"
+
+
+"ChatStarts" #SkyBlue -d> (*)
+
+@enduml

@@ -1,52 +1,99 @@
 @startuml
 
-participant ChatHandler
+skinparam sequence {
+ArrowColor DeepSkyBlue
+}
 
+participant App
+participant ChatController
+participant ViewController_Fragment
+participant BotChatHandler
 participant UIElementController
+participant ChatRecyclerAdapter
+participant ChatUIProvider
+participant ChatBubbleComponentViewHolder
+participant CarouselItemsHolder
+participant CarouselItemsView
+participant CarouselViewHolder
+participant ItemProperties.itemListener
+participant CarouselItemsViewAdapter
+participant CarouselItemHolder
+participant CarouselItemViewContainer
+participant User
 
-participant Adapter
 
-participant ViewHolder
+== initialization ==
 
-participant TextTagHandler
-
-participant DownloadController
-
+ChatController -> ViewController_Fragment: create
 ViewController_Fragment -> UIElementController: create
+ViewController_Fragment -> ChatRecyclerAdapter: create(UIElementController)
+ChatController -> BotChatHandler: create
 
-ViewController_Fragment -> Adapter: create(UIElementController)
+== Carousel Element Creation (most relevant flows) ==
 
-Adapter -> ViewHolder: Create
+BotChatHandler -> BotChatHandler: create CarouselElement(statementResponse)
+BotChatHandler -> ChatRecyclerAdapter: addElement(CarouselElement)
 
+== CarouselElement ViewHolder Creation (most relevant flows) ==
 
-BotChatHandler -> BotChatHandler: create CarouselElement
-BotChatHandler -> ChatDelegate: addElementToChat(CarouselElement)
-ChatDelegate -> ChatRecyclerAdapter: addElement(CarouselElement)
-ChatRecyclerAdapter -> ChatUIProvider: getCarouselItemsHolder
+ChatRecyclerAdapter -> ChatUIProvider: getIncomingCarouselViewHolder(uiElementController)
+ChatUIProvider -> CarouselItemsView: create - overridable adapter
+CarouselItemsView -> CarouselItemsViewAdapter: create
+ChatUIProvider -> CarouselItemsHolder: create (CarouselItemsView, uiElementController)
 
-ChatUIProvider -> ChatRecyclerAdapter:
+ChatUIProvider -> CarouselViewHolder: create(CarouselItemsHolder)
+ChatUIProvider -> ChatBubbleComponentViewHolder: create (CarouselViewHolder)
 
-group inside the onBind
-Adapter -> ViewHolder: Update(postUpdateCallback)
+== CarouselElement ViewHolder bind (most relevant flows) ==
+
+ChatRecyclerAdapter -> ChatBubbleComponentViewHolder: bind(CarouselChatElement)
+ChatBubbleComponentViewHolder -> CarouselItemsHolder: update(CarouselChatElement)
+CarouselItemsHolder -[#Red]> ItemProperties.itemListener: <font color=red>setItemActionListener()
+CarouselItemsHolder -> CarouselItemsView: setData(carouselItems, articleId)
+CarouselItemsView -> CarouselItemsViewAdapter: setData(carouselItems, articleId)
+CarouselItemsViewAdapter -> CarouselItemsViewAdapter: notifyDataChanged
+
+CarouselItemsViewAdapter -> CarouselItemHolder: create
+
+group #skyblue CarouselItemsViewAdapter bind
+CarouselItemsViewAdapter -> CarouselItemHolder: bindData(ItemProperties)
+    CarouselItemHolder -[#Red]> CarouselItemHolder: <font color=red>imageUrl = carouselDataItem.imageTargetLink
+    group  #PeachPuff ItemProperties.itemListener != null && !(imageUrl.isNullOrEmpty)
+       CarouselItemHolder -[#Red]> CarouselItemViewContainer: <font color=red>enableImageClick(click callback)
+       CarouselItemViewContainer -[#Red]> CarouselItemViewContainer: <font color=red>enable ViewHolder click
+       CarouselItemViewContainer -[#Red]> CarouselItemViewContainer: <font color=red>set View click listener
+    end
 end
 
-ViewHolder -> TextTagHandler: getSpannedHtmlWithImages(data, ... , \nUIElementController.downloaderFunction(position), postUpdateCallback)
+== View Recycled ==
 
-group ImageGetter
-TextTagHandler -> DownloadController: downloaderFunction.invoke(imageUrl)
-     group #LightBlue handleRequest is a function that sends the request \nto the DataManager handleRequest and returns a callback(Drawable)
-            DownloadController -> DataManager: fetchData <T>
-            DataManager --> DownloadController: onResponse (t: T)
-     end
-     DownloadController -> TextTagHandler: callback(Drawable)
-    TextTagHandler -> TextTagHandler: insert the imageUrl into the article
-    TextTagHandler --> ViewHolder: postUpdateCallback.invoke(position)
- end
+group #ivory ChatRecyclerAdapter vertical recycler
 
-ViewHolder -> UIElementController: postUpdateCallback(position)
-UIElementController -> ViewController_Fragment: onImageLoad(position)
-ViewController_Fragment -> Adapter: notifyItemChanged(position)
+ChatRecyclerAdapter -> ChatBubbleComponentViewHolder: clear
+ChatBubbleComponentViewHolder -> CarouselItemsHolder: clear
+CarouselItemsHolder -> CarouselItemsView: clear
+CarouselItemsView -> CarouselItemsViewAdapter: clear
+CarouselItemsViewAdapter -[#Red]> ItemProperties.itemListener: <font color=red>clear (set to null)
+end
 
+group #ivory Carousel horizontal recycler
+CarouselItemsViewAdapter -> CarouselItemHolder: clear
+note right
+ItemProperties.itemListener stays
+Its global for the carouselItemsView,
+Thus its being cleared when the carouselItemsView cleared
+end note
+CarouselItemHolder -[#Red]> CarouselItemViewContainer: <font color=red>clear clickListener
+end
 
+== User action - click on item image (click enabled) ==
+
+User -> CarouselItemViewContainer: click on item image
+CarouselItemViewContainer -[#Red]> CarouselItemHolder: <font color=red>callback
+CarouselItemHolder -[#Red]> ItemProperties.itemListener: <font color=red>onImageClicked(imageUrl)
+ItemProperties.itemListener -[#Red]> UIElementController: <font color=red>handleEvent(url click)
+UIElementController -> BotChatHandler: handleEvent(url click)
+BotChatHandler -> ChatController: handleEvent(url click)
+ChatController -> App: onUrlLinkSelected(url click)
 
 @enduml

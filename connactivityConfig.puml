@@ -1,0 +1,27 @@
+@startuml
+
+participant ConnactivityReciever
+participant NetworkConnectivityHandler
+participant ChatController
+participant ConfigurationsHandler
+participant ChatHandler
+
+
+ChatController -> ChatHandler: creates
+ChatController -> ConfigurationsHandler: creates
+
+ChatController -> NetworkConnectivityHandler: creates
+ChatController -> NetworkConnectivityHandler: setController(this)
+NetworkConnectivityHandler -> ConnactivityReciever: registers
+ConnactivityReciever -> NetworkConnectivityHandler: listens to network Events
+NetworkConnectivityHandler -> ChatController: connectionChanged(isConnected)
+ChatController -> ChatHandler: handleEvent(NetworkEvent)
+ChatHandler -> ChatController: handleEvent(NetworkEvent(account))
+ChatController -> ConfigurationsHandler: fetchConfigurations
+ConfigurationsHandler -> ChatController: onComplete
+ChatController -> ChatHandler: sets ConfigurationsProvider
+ChatHandler -> ChatHandler: onConfigurationChanged
+
+
+
+@enduml
